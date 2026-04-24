@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+.env
+.cache/
+.env.local
+out/
+dist/
+npm-debug.log*
+*.js.map
