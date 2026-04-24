@@ -1,57 +1,43 @@
-import { diff, Diff } from 'deep-diff';
-import { ConfigRecord } from './parser';
+export type DriftKind = 'added' | 'removed' | 'changed';
 
-export type DriftKind = 'added' | 'removed' | 'changed' | 'array-changed';
-
-export interface DriftEntry {
+export interface DriftResult {
+  key: string;
   kind: DriftKind;
-  path: string;
-  baseValue?: unknown;
-  targetValue?: unknown;
+  baseValue?: string;
+  targetValue?: string;
 }
 
-function kindFromDiff(d: Diff<unknown>): DriftKind {
-  switch (d.kind) {
-    case 'N': return 'added';
-    case 'D': return 'removed';
-    case 'E': return 'changed';
-    case 'A': return 'array-changed';
-    default: return 'changed';
-  }
+export function kindFromDiff(baseHas: boolean, targetHas: boolean): DriftKind {
+  if (!baseHas && targetHas) return 'added';
+  if (baseHas && !targetHas) return 'removed';
+  return 'changed';
 }
 
 export function computeDrift(
-  base: ConfigRecord,
-  target: ConfigRecord
-): DriftEntry[] {
-  const diffs = diff(base, target);
-  if (!diffs || diffs.length === 0) return [];
+  base: Record<string, string>,
+  target: Record<string, string>
+): DriftResult[] {
+  const results: DriftResult[] = [];
+  const allKeys = new Set([...Object.keys(base), ...Object.keys(target)]);
 
-  return diffs.map((d): DriftEntry => {
-    const keyPath = (d.path ?? []).join('.');
-    const kind = kindFromDiff(d);
+  for (const key of allKeys) {
+    const inBase = key in base;
+    const inTarget = key in target;
 
-    if (d.kind === 'E') {
-      return { kind, path: keyPath, baseValue: d.lhs, targetValue: d.rhs };
+    if (inBase && inTarget) {
+      if (base[key] !== target[key]) {
+        results.push({ key, kind: 'changed', baseValue: base[key], targetValue: target[key] });
+      }
+    } else if (!inBase && inTarget) {
+      results.push({ key, kind: 'added', targetValue: target[key] });
+    } else {
+      results.push({ key, kind: 'removed', baseValue: base[key] });
     }
-    if (d.kind === 'N') {
-      return { kind, path: keyPath, targetValue: d.rhs };
-    }
-    if (d.kind === 'D') {
-      return { kind, path: keyPath, baseValue: d.lhs };
-    }
-    if (d.kind === 'A') {
-      return {
-        kind,
-        path: `${keyPath}[${d.index}]`,
-        baseValue: d.item.kind === 'D' ? (d.item as Diff<unknown> & { lhs: unknown }).lhs : undefined,
-        targetValue: d.item.kind === 'N' ? (d.item as Diff<unknown> & { rhs: unknown }).rhs : undefined,
-      };
-    }
-    return { kind, path: keyPath };
-  });
+  }
+
+  return results.sort((a, b) => a.key.localeCompare(b.key));
 }
 
-export function hasDrift(entries: DriftEntry[]): boolean {
-  return entries.length > 0;
+export function hasDrift(drifts: DriftResult[]): boolean {
+  return drifts.length > 0;
 }
