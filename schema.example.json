@@ -1,0 +1,31 @@
+{
+  "rules": [
+    {
+      "key": "PORT",
+      "required": true,
+      "type": "number"
+    },
+    {
+      "key": "NODE_ENV",
+      "required": true,
+      "pattern": "^(development|staging|production|test)$"
+    },
+    {
+      "key": "DEBUG",
+      "type": "boolean"
+    },
+    {
+      "key": "DATABASE_URL",
+      "required": true,
+      "pattern": "^(postgres|mysql|sqlite)://"
+    },
+    {
+      "key": "API_KEY",
+      "required": true
+    },
+    {
+      "key": "MAX_CONNECTIONS",
+      "type": "number"
+    }
+  ]
+}
