@@ -18,6 +18,14 @@ describe('resolveLabel', () => {
     expect(resolveLabel('/some/path/staging.env')).toBe('staging');
     expect(resolveLabel('/some/path/config.json')).toBe('config');
   });
+
+  it('handles files with no extension', () => {
+    expect(resolveLabel('/some/path/Makefile')).toBe('Makefile');
+  });
+
+  it('handles deeply nested paths', () => {
+    expect(resolveLabel('/a/b/c/d/production.env')).toBe('production');
+  });
 });
 
 describe('loadConfig', () => {
@@ -45,6 +53,11 @@ describe('loadConfig', () => {
     const result = loadConfig(filePath);
     expect(result.data).toEqual({});
   });
+
+  it('includes the file path in ConfigLoadError message', () => {
+    const missingPath = '/nonexistent/path/missing.env';
+    expect(() => loadConfig(missingPath)).toThrow(missingPath);
+  });
 });
 
 describe('loadConfigs', () => {
@@ -62,5 +75,9 @@ describe('loadConfigs', () => {
     expect(() => loadConfigs([{ filePath: a }])).toThrow(
       'At least two config files are required'
     );
+  });
+
+  it('throws when an empty array is provided', () => {
+    expect(() => loadConfigs([])).toThrow('At least two config files are required');
   });
 });
