@@ -27,7 +27,11 @@ export function saveTags(label: string, tags: TagMap, base?: string): void {
 export function loadTags(label: string, base?: string): TagMap {
   const p = getTagPath(label, base);
   if (!fs.existsSync(p)) return {};
-  return JSON.parse(fs.readFileSync(p, 'utf-8')) as TagMap;
+  try {
+    return JSON.parse(fs.readFileSync(p, 'utf-8')) as TagMap;
+  } catch (err) {
+    throw new Error(`Failed to parse tag file for label "${label}": ${(err as Error).message}`);
+  }
 }
 
 export function addTag(label: string, key: string, tag: string, base?: string): TagMap {
