@@ -33,6 +33,10 @@ describe('parseSchemaArgs', () => {
   it('throws if no files provided', () => {
     expect(() => parseSchemaArgs(['--schema', 'schema.json'])).toThrow('At least one config file');
   });
+
+  it('throws if --schema flag is present but value is missing', () => {
+    expect(() => parseSchemaArgs(['a.env', '--schema'])).toThrow('--schema');
+  });
 });
 
 describe('cmdSchemaValidate integration', () => {
@@ -52,6 +56,22 @@ describe('cmdSchemaValidate integration', () => {
     await cmdSchemaValidate([envFile, '--schema', schemaFile]);
 
     expect(exitSpy).not.toHaveBeenCalled();
+    exitSpy.mockRestore();
+    writeSpy.mockRestore();
+  });
+
+  it('exits non-zero when a required key is missing', async () => {
+    const schema = { rules: [{ key: 'PORT', required: true, type: 'number' }] };
+    const schemaFile = writeTmp(dir, 'schema.json', JSON.stringify(schema));
+    const envFile = writeTmp(dir, '.env', 'OTHER=value\n');
+
+    const { cmdSchemaValidate } = await import('../schemaCmd');
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit'); });
+    const writeSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    await expect(cmdSchemaValidate([envFile, '--schema', schemaFile])).rejects.toThrow('exit');
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
     exitSpy.mockRestore();
     writeSpy.mockRestore();
   });
